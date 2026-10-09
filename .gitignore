@@ -1,0 +1,10 @@
+# 客户数据 / 工作文件
+客户档案/
+*.docx
+*.pdf
+*.jpg
+*.wav
+*.mp3
+*.mp4
+__pycache__/
+.venv/

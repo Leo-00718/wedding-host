@@ -1,0 +1,4 @@
+# 音乐工具依赖
+yt-dlp
+soundcard
+numpy
