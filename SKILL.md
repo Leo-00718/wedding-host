@@ -3,7 +3,7 @@ name: wedding-host
 description: 婚礼主持人的 AI 工作台。用于：① 婚礼业务 —— 根据新人问卷生成串词、设计流程、生成三版本流程表（基础版/彩排简易版/最终版）、音乐下载/裁剪/录制/仪式前核检；② 自媒体 —— 触发 FU-ip 做拍摄脚本、同类 IP 调研、账号分析；③ 培训 —— 学员毕业海报、公众号图文视频。当用户提到"婚礼""主持""串词""流程表""彩排""新人问卷""音乐""BGM""司仪""毕业海报"时使用。
 license: MIT
 metadata:
-  version: 0.2.0
+  version: 0.3.0
   category: wedding
   tags: [wedding, host, mc, 婚礼, 主持, 串词, 流程]
 ---
@@ -128,7 +128,7 @@ python scripts/check_flow.py 成品1.docx 成品2.docx 成品3.docx \
 
 ## 四、培训板块
 
-- **学员毕业海报**：触发 `imagegen` skill 作图
+- **学员欢迎/毕业海报**：优先使用 `scripts/build_poster.py` 固定版式生成；中文姓名、期数、电话必须本地绘制，规则见 `references/海报制作规范.md`。需要 AI 艺术背景时再调用 `imagegen`。
 - **明星学员公众号（图文+视频）**：图文用文字生成 + 配图，视频脚本按自媒体流程走
 
 ---
@@ -140,6 +140,8 @@ ffmpeg / ffprobe   音乐处理（本机已装在 C:\Users\Administrator\Doubao\
 yt-dlp             音乐下载（pip install yt-dlp）
 soundcard + numpy  录音（pip install soundcard numpy）
 pywin32            Word 自动化（落款自动贴页底）
+Pillow             海报本地绘制
+opencv-python-headless  海报人像自动抠图（可选；不装则退回原图裁剪）
 ```
 
 ---
@@ -152,3 +154,4 @@ pywin32            Word 自动化（落款自动贴页底）
 4. **生成后必须人工确认** —— AI 出稿，主持人定稿
 5. **音乐版权** —— 录制下载属于使用者自行担责的行为
 6. **24 小时 SLA** —— 流程表从沟通到交付不超过 24 小时
+7. **客户人像和海报隐私** —— 人像、姓名、电话、二维码、最终海报只保存在本地，不上传外部服务，不提交公开仓库

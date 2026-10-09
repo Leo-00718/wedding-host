@@ -2,5 +2,9 @@
 yt-dlp
 soundcard
 numpy
-# Word 排版依赖（落款自动贴页底）
+# Word 排版依赖
+python-docx
 pywin32
+# 海报绘制与自动抠图
+Pillow
+opencv-python-headless
