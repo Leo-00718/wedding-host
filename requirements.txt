@@ -2,3 +2,5 @@
 yt-dlp
 soundcard
 numpy
+# Word 排版依赖（落款自动贴页底）
+pywin32
