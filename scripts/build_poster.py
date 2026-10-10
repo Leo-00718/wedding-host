@@ -44,9 +44,9 @@ L = dict(
     name_color=(42, 42, 42),
     qi_x=131, qi_y=978, qi_size=28, qi_gap=5, qi_num_dy=0.0,   # 母版实测：等线28 + 字距5
     qi_color=(48, 48, 48),
-    phone_x=302, phone_y=1481, phone_size=28, phone_color=(48, 48, 48),
-    qr_size=90, qr_x=90, qr_y=1422, qr_crop=None,   # qr_crop=None 时自动去除白边
-    saoma_y=1529, saoma_size=18, saoma_color=(70, 70, 70),
+    phone_x=301, phone_y=1485, phone_size=22, phone_color=(48, 48, 48),   # 母版实测
+    qr_size=92, qr_x=88, qr_y=1422, qr_crop=None,   # 母版实测：92x92 @(88,1422)；None=自动去白边
+    saoma_y=1530, saoma_size=14, saoma_color=(70, 70, 70),   # 母版实测（18->14：母版墨迹 55x13）
     vert_x=872, vert_y=336, vert_step=30, vert_size=18, vert_color=(181, 179, 174),
 )
 
@@ -315,12 +315,13 @@ def fuse_strip(person, strip, strip_y_ratio=None, verbose=True):
 
 
 def build(person_path, name, cohort, out_path, qr_path=None, phone=None,
-          ratio=None, verbose=True):
+          ratio=None, verbose=True, person_cut=None):
     ratio = L["person_ratio"] if ratio is None else ratio
     canvas = Image.open(BASE_IMG).convert("RGBA")
     W, H = canvas.size
 
-    person = cutout(person_path)
+    # person_cut：批量出图时复用同一张人物抠图（N 个老师共享，省 N 次 rembg）
+    person = person_cut if person_cut is not None else cutout(person_path)
     tw = L["person_w"]; th = int(round(person.height * tw / person.width))
     person = person.resize((tw, th), Image.LANCZOS)
     anchor_y, info = detect_blue_anchor(BASE_IMG, ratio)
@@ -331,7 +332,7 @@ def build(person_path, name, cohort, out_path, qr_path=None, phone=None,
     # ★ 优先走"纸条"流程；无纸条时退回程序生成撕纸
     if STRIP_IMG.exists() and not L.get("use_procedural_tear"):
         merged, tear_local = fuse_strip(person, Image.open(STRIP_IMG).convert("RGBA"),
-                                        L.get("strip_tear_ratio"))
+                                        L.get("strip_tear_ratio"), verbose=verbose)
         # ★ 定位：用【撕裂线】对齐锚点（人物实际边缘，不是图块边界）
         scale = L["person_w"] / merged.width
         top_y = anchor_y - int(round(tear_local * scale))
