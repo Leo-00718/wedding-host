@@ -29,7 +29,8 @@ TEAR_TPL  = SKILL_DIR / "assets" / "poster" / "tear_template.json"
 TEAR_PROF = SKILL_DIR / "assets" / "poster" / "tear_profile.npy"
 FONT_DIR  = SKILL_DIR / "assets" / "fonts"
 SONG_FONT = r"C:\Windows\Fonts\simsun.ttc"
-NAME_FONT = FONT_DIR / "瘦金简体.ttf"       # 姓名专用细体（同字号 = 各字等大）          # 期数/电话/扫码咨询
+NAME_FONT = FONT_DIR / "瘦金简体.ttf"
+QI_FONT = r"C:\Windows\Fonts\Deng.ttf"    # 期数字体：等线（母版实测密度 24.8% 完全吻合）       # 姓名专用细体（同字号 = 各字等大）          # 期数/电话/扫码咨询
 
 # ---------- 版式参数（相对底板固定）----------
 L = dict(
@@ -41,7 +42,8 @@ L = dict(
     name_x=106, name_top=790, name_band=(790, 961), name_gap=6.5,
     name_size0=127.5, name_right_pad=2,   # 统一字号（=原170×0.75）；总宽超了就整体缩小
     name_color=(42, 42, 42),
-    qi_x=130, qi_y=978, qi_size=34, qi_color=(48, 48, 48),
+    qi_x=131, qi_y=978, qi_size=28, qi_gap=5, qi_num_dy=0.0,   # 母版实测：等线28 + 字距5
+    qi_color=(48, 48, 48),
     phone_x=302, phone_y=1481, phone_size=28, phone_color=(48, 48, 48),
     qr_size=90, qr_x=90, qr_y=1422, qr_crop=None,   # qr_crop=None 时自动去除白边
     saoma_y=1529, saoma_size=18, saoma_color=(70, 70, 70),
@@ -153,6 +155,38 @@ def char_img(ch, fontpath, target_h, color, sx=1.0, sy=1.0):
     ImageDraw.Draw(im).text((-bb[0], -bb[1]), ch, font=f, fill=color + (255,))
     s = target_h / h
     return im.resize((max(1, int(w * s * sx)), max(1, int(h * s * sy))), Image.LANCZOS)
+
+
+def draw_spaced(layer, text, font_path, size, gap, x, y, color, num_dy=0):
+    """逐字绘制 + 字间距；整体墨迹左上角对齐 (x, y)。
+    垂直：汉字按【底线】对齐；数字/拉丁字母【单独排版】——默认在行内垂直居中。
+    依据母版实测：汉字 y978-1003，数字 y980-1001（居中），而不是与汉字底边齐平
+    （齐平会让矮的数字看着"沉下去"，底部线显得歪）。num_dy 可再微调数字上下。"""
+    f = ImageFont.truetype(str(font_path), max(8, int(round(size))))
+    d0 = ImageDraw.Draw(Image.new("RGB", (4, 4)))
+    pieces = []
+    for ch in text:
+        bb = d0.textbbox((0, 0), ch, font=f)
+        w, h = bb[2] - bb[0], bb[3] - bb[1]
+        if w <= 0 or h <= 0:
+            continue
+        im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        ImageDraw.Draw(im).text((-bb[0], -bb[1]), ch, font=f, fill=color + (255,))
+        pieces.append(im)
+    if not pieces:
+        return
+    W = int(round(sum(q.width for q in pieces) + gap * (len(pieces) - 1)))
+    H = int(max(q.height for q in pieces))
+    canv = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    cx = 0.0
+    for ch, q in zip([c for c in text], pieces):
+        if ch.isascii() and ch.isalnum():
+            dy = (H - q.height) / 2.0 + num_dy      # 数字：行内垂直居中（可微调）
+        else:
+            dy = H - q.height                        # 汉字：底线对齐
+        canv.alpha_composite(q, (int(round(cx)), int(round(dy))))
+        cx += q.width + gap
+    layer.alpha_composite(canv.crop(canv.getbbox()), (int(round(x)), int(round(y))))
 
 
 def glyph_size(ch, em, color):
@@ -345,9 +379,8 @@ def build(person_path, name, cohort, out_path, qr_path=None, phone=None,
                   % (S, name_right, avail, x - gap - 1))
 
     # 期数
-    qf = ImageFont.truetype(SONG_FONT, L["qi_size"])
-    bb = d.textbbox((0, 0), cohort, font=qf)
-    d.text((L["qi_x"] - bb[0], L["qi_y"] - bb[1]), cohort, font=qf, fill=L["qi_color"])
+    draw_spaced(layer, cohort, QI_FONT, L["qi_size"], L["qi_gap"],
+                L["qi_x"], L["qi_y"], L["qi_color"], L.get("qi_num_dy", 0.0))
 
     # 电话
     if phone:
@@ -391,7 +424,13 @@ def main():
     ap.add_argument("--ratio", type=float, help="人物底边占蓝笔触高度比例，默认 1.0（对齐母版）")
     ap.add_argument("--name-size", type=float, help="姓名基准字号，默认 170")
     ap.add_argument("--name-gap", type=float, help="姓名字间距，默认 13")
-    ap.add_argument("--name-x", type=float, help="姓名字墨迹左缘 x，默认 116")
+    ap.add_argument("--name-x", type=float, help="姓名字墨迹左缘 x，默认 106")
+    ap.add_argument("--qi-size", type=float, help="期数字号，默认 28")
+    ap.add_argument("--qi-gap", type=float, help="期数字间距，默认 5")
+    ap.add_argument("--qi-x", type=float, help="期数墨迹左缘 x，默认 132")
+    ap.add_argument("--qi-y", type=float, help="期数墨迹顶 y，默认 978")
+    ap.add_argument("--qi-font", help="期数字体路径（默认等线 Deng.ttf）")
+    ap.add_argument("--qi-num-dy", type=float, default=0.0, help="期数里数字的上下微调（px，正=下移）")
     ap.add_argument("--out", required=True, help="输出 PNG 路径")
     a = ap.parse_args()
     if not BASE_IMG.exists():
@@ -399,6 +438,12 @@ def main():
     if a.name_size: L["name_size0"] = a.name_size
     if a.name_gap:  L["name_gap"]   = a.name_gap
     if a.name_x is not None: L["name_x"] = a.name_x
+    if a.qi_size: L["qi_size"] = a.qi_size
+    if a.qi_gap is not None: L["qi_gap"] = a.qi_gap
+    if a.qi_x is not None: L["qi_x"] = a.qi_x
+    if a.qi_y is not None: L["qi_y"] = a.qi_y
+    if a.qi_font: globals()["QI_FONT"] = a.qi_font
+    if a.qi_num_dy: L["qi_num_dy"] = a.qi_num_dy
     build(a.person, a.name, a.cohort, a.out, a.qr, a.phone, a.ratio)
 
 
