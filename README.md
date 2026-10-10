@@ -76,6 +76,20 @@ pip install -r requirements.txt
 
 详细说明见 [使用说明.md](使用说明.md)。
 
+### 3. 海报功能的前置条件（新机器必读）
+
+- **平台**：Windows —— 海报流程读取系统宋体 `C:\Windows\Fonts\simsun.ttc` 画期数/电话
+- **首次运行需联网一次**：rembg 会自动下载抠图模型 `u2net_human_seg`（约 179MB），之后离线可用（缓存在 `~/.u2net/`）
+- **底板 / 撕纸母版 / 字体已随仓库分发**（`assets/`），不需要额外下载
+- 验证一条命令：
+
+  ```bash
+  python scripts/build_poster.py 照片.jpg --name "张三" --cohort "第35期学员" --out 出图.png
+  ```
+
+  输出 971×1620 PNG；完整版式规则见 [references/海报制作规范.md](references/海报制作规范.md)
+- ⚠️ `assets/fonts/` 中的 **方正字迹-吕建德行楷** 与 **瘦金简体** 授权待核，商用前请自行确认
+
 ---
 
 ## 使用
