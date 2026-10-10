@@ -29,7 +29,7 @@ TEAR_TPL  = SKILL_DIR / "assets" / "poster" / "tear_template.json"
 TEAR_PROF = SKILL_DIR / "assets" / "poster" / "tear_profile.npy"
 FONT_DIR  = SKILL_DIR / "assets" / "fonts"
 SONG_FONT = r"C:\Windows\Fonts\simsun.ttc"
-NAME_FONT = FONT_DIR / "瘦金简体.ttf"
+NAME_FONT = FONT_DIR / "瘦金简体.ttf"       # 姓名专用细体（同字号 = 各字等大）
 QI_FONT = r"C:\Windows\Fonts\Deng.ttf"    # 期数字体：等线（母版实测密度 24.8% 完全吻合）       # 姓名专用细体（同字号 = 各字等大）          # 期数/电话/扫码咨询
 
 # ---------- 版式参数（相对底板固定）----------
@@ -191,9 +191,45 @@ def draw_spaced(layer, text, font_path, size, gap, x, y, color, num_dy=0):
     layer.alpha_composite(canv.crop(canv.getbbox()), (int(round(x)), int(round(y))))
 
 
+def desktop_dirs():
+    """可能的桌面目录：英文 Desktop / OneDrive 桌面 / 中文「桌面」"""
+    home = Path.home()
+    return [home / "Desktop", home / "OneDrive" / "Desktop", home / "OneDrive" / "桌面", home / "桌面"]
+
+
+_NAME_FONT_RESOLVED = None
+
+
+def name_font_path():
+    """姓名（瘦金）字体查找顺序：
+      ① skill 自带 assets/fonts/瘦金简体.ttf
+      ② 桌面（含 OneDrive 桌面 / 中文「桌面」，递归找文件名含「瘦金」的 .ttf/.otf）
+      ③ 都没有 -> 明确报错，提示把字体放哪
+    """
+    global _NAME_FONT_RESOLVED
+    if _NAME_FONT_RESOLVED is not None:
+        return _NAME_FONT_RESOLVED
+    if NAME_FONT.exists():
+        _NAME_FONT_RESOLVED = NAME_FONT
+        return _NAME_FONT_RESOLVED
+    for d in desktop_dirs():
+        if not d.is_dir():
+            continue
+        hits = sorted(f for f in d.rglob("*")
+                      if f.suffix.lower() in (".ttf", ".otf") and "瘦金" in f.name)
+        if hits:
+            _NAME_FONT_RESOLVED = hits[0]
+            return _NAME_FONT_RESOLVED
+    sys.exit("找不到姓名字体（瘦金）：\n"
+             "  ① %s\n"
+             "  ② 桌面（%s）里文件名含「瘦金」的 .ttf / .otf\n"
+             "把「瘦金简体.ttf」放到桌面，或放进 skill 的 assets/fonts/ 即可。"
+             % (NAME_FONT, "、".join(str(x) for x in desktop_dirs())))
+
+
 def glyph_size(ch, em, color):
     """按字号 em 渲染单字，返回裁到墨迹的 RGBA（同一字号 = 各字真正等大）"""
-    f = ImageFont.truetype(str(NAME_FONT), max(8, int(round(em))))
+    f = ImageFont.truetype(str(name_font_path()), max(8, int(round(em))))
     d0 = ImageDraw.Draw(Image.new("RGB", (4, 4)))
     bb = d0.textbbox((0, 0), ch, font=f)
     w, h = bb[2] - bb[0], bb[3] - bb[1]
@@ -432,6 +468,7 @@ def main():
     ap.add_argument("--name-size", type=float, help="姓名基准字号，默认 170")
     ap.add_argument("--name-gap", type=float, help="姓名字间距，默认 13")
     ap.add_argument("--name-x", type=float, help="姓名字墨迹左缘 x，默认 106")
+    ap.add_argument("--name-font", help="姓名字体路径（默认：先找 skill assets，再找桌面）")
     ap.add_argument("--qi-size", type=float, help="期数字号，默认 28")
     ap.add_argument("--qi-gap", type=float, help="期数字间距，默认 5")
     ap.add_argument("--qi-x", type=float, help="期数墨迹左缘 x，默认 132")
@@ -444,11 +481,13 @@ def main():
     ap.add_argument("--vert-y", type=float, help="竖排文案首字墨迹顶 y，默认 336")
     ap.add_argument("--out", required=True, help="输出 PNG 路径")
     a = ap.parse_args()
+    print("  [字体] 姓名用 %s" % name_font_path())   # 提前解析，字体缺失立刻报错
     if not BASE_IMG.exists():
         sys.exit("缺少底板：%s" % BASE_IMG)
     if a.name_size: L["name_size0"] = a.name_size
     if a.name_gap:  L["name_gap"]   = a.name_gap
     if a.name_x is not None: L["name_x"] = a.name_x
+    if a.name_font: globals()["_NAME_FONT_RESOLVED"] = Path(a.name_font)
     if a.qi_size: L["qi_size"] = a.qi_size
     if a.qi_gap is not None: L["qi_gap"] = a.qi_gap
     if a.qi_x is not None: L["qi_x"] = a.qi_x

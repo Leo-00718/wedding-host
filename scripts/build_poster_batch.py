@@ -54,6 +54,8 @@ def main():
     ap.add_argument("--ratio", type=float, help="人物底边占蓝笔触高度比例，默认 1.0")
     a = ap.parse_args()
 
+    print("  [字体] 姓名用 %s" % bp.name_font_path())   # 提前解析，字体缺失立刻报错
+
     teachers, enc = read_teachers(a.teachers)
     if not teachers:
         sys.exit("老师清单为空或格式不对（需要 3 列：老师,二维码,电话）")
