@@ -47,7 +47,9 @@ L = dict(
     phone_x=301, phone_y=1485, phone_size=22, phone_color=(48, 48, 48),   # 母版实测
     qr_size=92, qr_x=88, qr_y=1422, qr_crop=None,   # 母版实测：92x92 @(88,1422)；None=自动去白边
     saoma_y=1530, saoma_size=14, saoma_color=(70, 70, 70),   # 母版实测（18->14：母版墨迹 55x13）
-    vert_x=872, vert_y=336, vert_step=30, vert_size=18, vert_color=(181, 179, 174),
+    vert_text="让世界听见你的声音",
+    vert_x=872, vert_y=336, vert_step=25, vert_size=17, vert_color=(139, 139, 133),  # 母版实测
+    vert_line=(872, 570, 2, 36), vert_line_color=(208, 206, 200),   # 文案下方细竖线（母版实测）
 )
 
 
@@ -398,11 +400,15 @@ def build(person_path, name, cohort, out_path, qr_path=None, phone=None,
                 L["saoma_y"] - bbs[1]), sm, font=sf, fill=L["saoma_color"])
 
     # 竖排文案
+    # 竖排文案：母版实测「让世界听见你的声音」9 字，中心 x=872.5，首字顶 336，步进 25，字高 15
     vf = ImageFont.truetype(SONG_FONT, L["vert_size"])
-    for i, ch in enumerate("让世界听见你的声音"):
+    for i, ch in enumerate(L["vert_text"]):
         bbv = d.textbbox((0, 0), ch, font=vf)
         d.text((L["vert_x"] - (bbv[2] - bbv[0]) / 2 - bbv[0],
                 L["vert_y"] + i * L["vert_step"] - bbv[1]), ch, font=vf, fill=L["vert_color"])
+    # 文案下方的细竖线（母版实测 x[872,873] y[570,605]，2x36）
+    _lx, _ly, _lw, _lh = L["vert_line"]
+    d.rectangle([_lx, _ly, _lx + _lw - 1, _ly + _lh - 1], fill=L["vert_line_color"])
 
     canvas.alpha_composite(layer)
     if qr_path:
@@ -432,6 +438,10 @@ def main():
     ap.add_argument("--qi-y", type=float, help="期数墨迹顶 y，默认 978")
     ap.add_argument("--qi-font", help="期数字体路径（默认等线 Deng.ttf）")
     ap.add_argument("--qi-num-dy", type=float, default=0.0, help="期数里数字的上下微调（px，正=下移）")
+    ap.add_argument("--vert-size", type=float, help="竖排文案字号，默认 17")
+    ap.add_argument("--vert-step", type=float, help="竖排文案字距步进，默认 25")
+    ap.add_argument("--vert-x", type=float, help="竖排文案中心 x，默认 872")
+    ap.add_argument("--vert-y", type=float, help="竖排文案首字墨迹顶 y，默认 336")
     ap.add_argument("--out", required=True, help="输出 PNG 路径")
     a = ap.parse_args()
     if not BASE_IMG.exists():
@@ -445,6 +455,10 @@ def main():
     if a.qi_y is not None: L["qi_y"] = a.qi_y
     if a.qi_font: globals()["QI_FONT"] = a.qi_font
     if a.qi_num_dy: L["qi_num_dy"] = a.qi_num_dy
+    if a.vert_size: L["vert_size"] = a.vert_size
+    if a.vert_step: L["vert_step"] = a.vert_step
+    if a.vert_x is not None: L["vert_x"] = a.vert_x
+    if a.vert_y is not None: L["vert_y"] = a.vert_y
     build(a.person, a.name, a.cohort, a.out, a.qr, a.phone, a.ratio)
 
 
