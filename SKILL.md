@@ -3,7 +3,7 @@ name: wedding-host
 description: 婚礼主持人的 AI 工作台。用于：① 婚礼业务 —— 根据新人问卷生成串词、设计流程、生成三版本流程表（基础版/彩排简易版/最终版）、音乐下载/裁剪/录制/仪式前核检；② 自媒体 —— 触发 FU-ip 做拍摄脚本、同类 IP 调研、账号分析；③ 培训 —— 学员毕业海报、公众号图文视频。当用户提到"婚礼""主持""串词""流程表""彩排""新人问卷""音乐""BGM""司仪""毕业海报"时使用。
 license: MIT
 metadata:
-  version: 0.3.0
+  version: 0.3.1
   category: wedding
   tags: [wedding, host, mc, 婚礼, 主持, 串词, 流程]
 ---
@@ -128,7 +128,12 @@ python scripts/check_flow.py 成品1.docx 成品2.docx 成品3.docx \
 
 ## 四、培训板块
 
-- **学员欢迎/毕业海报**：优先使用 `scripts/build_poster.py` 固定版式生成；中文姓名、期数、电话必须本地绘制，规则见 `references/海报制作规范.md`。需要 AI 艺术背景时再调用 `imagegen`。
+- **学员欢迎/毕业海报**：用 `scripts/build_poster.py` 生成，**固定底板 + 自动抠图 + 自动锚定**，一条命令出图（约 3 秒）。底板与字体放在本机 skill 的 `assets/` 下（**二进制资产不进公开仓库**）。
+  姓名/期数/电话必须本地字体绘制；二维码必须用原图等比缩放。
+  人像必须用 rembg 抠图（**不要用 GrabCut**）；**撕裂线**自动对齐蓝笔触下沿 `y=1365`（比例 1.0），换人无需重测。
+  纸条轮廓必须贴合人像轮廓（`纸条 alpha × 人像 alpha`）——这是唯一同时满足「纸条不超人像 / 人像不超纸条」的做法。
+  姓名用 `assets/fonts/瘦金简体.ttf`：**所有字同一字号**（基准 127.5）、右边界按人像左边缘自适应；该字体**授权待核**，未随仓库分发。
+  完整规则与踩坑记录见 `references/海报制作规范.md`。
 - **明星学员公众号（图文+视频）**：图文用文字生成 + 配图，视频脚本按自媒体流程走
 
 ---
@@ -141,7 +146,9 @@ yt-dlp             音乐下载（pip install yt-dlp）
 soundcard + numpy  录音（pip install soundcard numpy）
 pywin32            Word 自动化（落款自动贴页底）
 Pillow             海报本地绘制
-opencv-python-headless  海报人像自动抠图（可选；不装则退回原图裁剪）
+opencv-python-headless  版式处理 + 蓝笔触检测
+rembg + onnxruntime    人像抠图（u2net_human_seg，首次运行自动下载 ~179MB 模型）
+pyzbar / zxing-cpp     二维码可扫性自检（可选）
 ```
 
 ---
